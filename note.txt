@@ -1,0 +1,12 @@
+Display text
+Text('String you want to display')
+
+Scaffold -> Apply theme, style to the app
+
+AppBar -> Hiển thị title xanh xanh ở trên
+
+body -> Nơi chứa app của mình
+
+
+Card -> Display a box with shadow
+Padding -> Để thụt vô
