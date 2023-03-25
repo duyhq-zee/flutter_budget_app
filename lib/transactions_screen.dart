@@ -1,8 +1,11 @@
 // ignore_for_file: prefer_const_constructors
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_budget_app/transaction_creating_screen.dart';
 import 'package:flutter_budget_app/transaction_model.dart';
+import 'package:http/http.dart' as http;
 
 class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key});
@@ -12,12 +15,37 @@ class TransactionScreen extends StatefulWidget {
 }
 
 class _TransactionScreenState extends State<TransactionScreen> {
-  var list = [
-    Transaction(1, 50, 'Mẹ cho', '10/03/2023'),
-    Transaction(2, -20, 'Ăn sáng', '11/03/2023'),
-    Transaction(4, -30, 'Ăn trưa', '11/03/2023'),
-    Transaction(6, -30, 'Ăn trưa', '11/03/2023'),
-  ];
+  var list = [];
+
+  void fetchData() {
+    var url = Uri.parse(
+        'https://budget-app-3c16f-default-rtdb.asia-southeast1.firebasedatabase.app/transactions.json');
+
+    list = [];
+
+    http.get(url).then((response) {
+      var data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      data.forEach((key, value) {
+        var newTransaction = Transaction(
+          key,
+          value['amount'],
+          value['title'],
+          value['date'],
+        );
+
+        list.add(newTransaction);
+      });
+
+      setState(() {});
+    });
+  }
+
+  @override
+  void initState() {
+    fetchData();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +60,35 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 builder: (context) => TransactionCreatingScreen(null),
               ))
                   .then((value) {
-                // map['key']
-                var id = list[list.length - 1].id + 1;
-                var newTransaction = Transaction(
-                    id, value['amount'], value['title'], value['date']);
+                var url = Uri.parse(
+                    'https://budget-app-3c16f-default-rtdb.asia-southeast1.firebasedatabase.app/transactions.json');
 
-                setState(() {
-                  list.add(newTransaction);
+                http
+                    .post(
+                  url,
+                  body: jsonEncode(
+                    {
+                      'amount': value['amount'],
+                      'title': value['title'],
+                      'date': value['date'],
+                    },
+                  ),
+                )
+                    .then((response) {
+                  var data = jsonDecode(response.body) as Map<String, dynamic>;
+
+                  String id = data['name'];
+
+                  var newTransaction = Transaction(
+                    id,
+                    value['amount'],
+                    value['title'],
+                    value['date'],
+                  );
+
+                  setState(() {
+                    list.add(newTransaction);
+                  });
                 });
               });
             },
@@ -88,11 +138,27 @@ class _TransactionScreenState extends State<TransactionScreen> {
                                           TransactionCreatingScreen(item),
                                     ),
                                   ).then((value) {
-                                    setState(() {
-                                      // Update data
-                                      item.amount = value['amount'];
-                                      item.title = value['title'];
-                                      item.date = value['date'];
+                                    var url = Uri.parse(
+                                        'https://budget-app-3c16f-default-rtdb.asia-southeast1.firebasedatabase.app/transactions/${item.id}.json');
+
+                                    http
+                                        .put(
+                                      url,
+                                      body: jsonEncode(
+                                        {
+                                          'amount': value['amount'],
+                                          'title': value['title'],
+                                          'date': value['date'],
+                                        },
+                                      ),
+                                    )
+                                        .then((response) {
+                                      setState(() {
+                                        // Update data
+                                        item.amount = value['amount'];
+                                        item.title = value['title'];
+                                        item.date = value['date'];
+                                      });
                                     });
                                   });
                                 },
@@ -101,6 +167,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
                               IconButton(
                                 onPressed: () {
                                   setState(() {
+                                    var url = Uri.parse(
+                                        'https://budget-app-3c16f-default-rtdb.asia-southeast1.firebasedatabase.app/transactions/${item.id}.json');
+                                    http.delete(url);
+
                                     list.removeWhere((i) => i.id == item.id);
                                   });
                                 },
